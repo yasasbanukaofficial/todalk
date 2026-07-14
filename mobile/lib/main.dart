@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/task_provider.dart';
+import 'services/api_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
@@ -18,28 +19,48 @@ void main() async {
   } catch (e) {
     debugPrint('Failed to load .env: $e');
   }
-  final taskProvider = TaskProvider();
+
+  final apiBaseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:3000';
+  final apiService = ApiService(baseUrl: apiBaseUrl);
+  await apiService.init();
+
+  final authProvider = AuthProvider(apiService: apiService);
+  final sessionRestored = await authProvider.tryRestoreSession();
+
+  final taskProvider = TaskProvider(apiService: apiService);
   await taskProvider.loadTasks();
-  runApp(TodalkApp(taskProvider: taskProvider));
+
+  runApp(TodalkApp(
+    taskProvider: taskProvider,
+    authProvider: authProvider,
+    initialRoute: sessionRestored ? '/home' : '/auth',
+  ));
 }
 
 class TodalkApp extends StatelessWidget {
   final TaskProvider taskProvider;
+  final AuthProvider authProvider;
+  final String initialRoute;
 
-  const TodalkApp({super.key, required this.taskProvider});
+  const TodalkApp({
+    super.key,
+    required this.taskProvider,
+    required this.authProvider,
+    required this.initialRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: taskProvider),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider.value(value: authProvider),
       ],
       child: MaterialApp(
         title: 'ToDalk',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
-        initialRoute: '/auth',
+        initialRoute: initialRoute,
         routes: {
           '/auth': (_) => const AuthScreen(),
           '/home': (_) => const MainScreen(),
@@ -99,8 +120,8 @@ class _MainScreenState extends State<MainScreen> {
         height: 60,
         child: FloatingActionButton(
           onPressed: _openRecording,
-          backgroundColor: AppColors.surfaceCard,
-          elevation: 4,
+          backgroundColor: AppColors.surfaceRaised,
+          elevation: 0,
           shape: const CircleBorder(),
           child: const Icon(
             Icons.mic,
@@ -113,9 +134,9 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
-        backgroundColor: AppColors.surfaceDark,
+        backgroundColor: AppColors.surface,
         selectedItemColor: AppColors.white,
-        unselectedItemColor: AppColors.grey,
+        unselectedItemColor: AppColors.textSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
         selectedFontSize: 12,

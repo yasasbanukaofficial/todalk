@@ -8,10 +8,11 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
+    final auth = context.watch<AuthProvider>();
+    final user = auth.user;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.black,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
@@ -19,10 +20,10 @@ class ProfileScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 20),
               Container(
-                width: 80,
-                height: 80,
+                width: 60,
+                height: 60,
                 decoration: BoxDecoration(
-                  color: AppColors.lavender.withValues(alpha: 0.2),
+                  border: Border.all(color: AppColors.hairline, width: 1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -32,20 +33,20 @@ class ProfileScreen extends StatelessWidget {
                             : '?')
                         .toUpperCase(),
                     style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.lavender,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Text(
                 user?.name ?? 'User',
                 style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary,
                 ),
               ),
               if (user?.email.isNotEmpty == true) ...[
@@ -53,38 +54,35 @@ class ProfileScreen extends StatelessWidget {
                 Text(
                   user!.email,
                   style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.grey,
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
               const SizedBox(height: 32),
               _SettingsRow(
-                icon: Icons.notifications_outlined,
                 label: 'Notifications',
                 onTap: () {},
               ),
               _SettingsRow(
-                icon: Icons.palette_outlined,
                 label: 'Theme',
                 onTap: () {},
               ),
               _SettingsRow(
-                icon: Icons.info_outline,
                 label: 'About',
                 onTap: () {},
               ),
-              const Divider(height: 1, color: AppColors.lightGrey),
               _SettingsRow(
-                icon: Icons.logout,
-                label: 'Log out',
+                label: 'Log Out',
                 isDestructive: true,
-                onTap: () {
-                  context.read<AuthProvider>().logout();
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/auth',
-                    (route) => false,
-                  );
+                onTap: () async {
+                  await context.read<AuthProvider>().logout();
+                  if (context.mounted) {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/auth',
+                      (route) => false,
+                    );
+                  }
                 },
               ),
             ],
@@ -96,13 +94,11 @@ class ProfileScreen extends StatelessWidget {
 }
 
 class _SettingsRow extends StatelessWidget {
-  final IconData icon;
   final String label;
   final VoidCallback onTap;
   final bool isDestructive;
 
   const _SettingsRow({
-    required this.icon,
     required this.label,
     required this.onTap,
     this.isDestructive = false,
@@ -110,32 +106,29 @@ class _SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ListTile(
-          onTap: onTap,
-          leading: Icon(
-            icon,
-            color: isDestructive ? AppColors.red : AppColors.grey,
-            size: 22,
-          ),
-          title: Text(
-            label,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: isDestructive ? AppColors.red : AppColors.white,
-            ),
-          ),
-          trailing: const Icon(
-            Icons.chevron_right,
-            color: AppColors.grey,
-            size: 22,
-          ),
-          contentPadding: EdgeInsets.zero,
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: AppColors.hairline, width: 1),
         ),
-        const Divider(height: 1, color: AppColors.lightGrey),
-      ],
+      ),
+      child: ListTile(
+        onTap: onTap,
+        title: Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            color: isDestructive ? AppColors.priorityHigh : AppColors.textPrimary,
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: isDestructive ? AppColors.priorityHigh : AppColors.textTertiary,
+          size: 20,
+        ),
+        contentPadding: EdgeInsets.zero,
+      ),
     );
   }
 }

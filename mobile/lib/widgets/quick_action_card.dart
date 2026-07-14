@@ -4,14 +4,12 @@ import '../theme/app_theme.dart';
 class QuickActionCard extends StatelessWidget {
   final String label;
   final IconData icon;
-  final Color color;
   final VoidCallback onTap;
 
   const QuickActionCard({
     super.key,
     required this.label,
     required this.icon,
-    required this.color,
     required this.onTap,
   });
 
@@ -20,33 +18,22 @@ class QuickActionCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          border: Border.all(
-            color: color.withValues(alpha: 0.3),
-            width: 1,
-          ),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppColors.hairline, width: 1),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.25),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 22, color: color),
-            ),
-            const SizedBox(height: 8),
+            Icon(icon, size: 16, color: AppColors.textSecondary),
+            const SizedBox(width: 8),
             Text(
               label,
               style: const TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.white,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
               ),
             ),
           ],

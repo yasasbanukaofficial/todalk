@@ -16,25 +16,17 @@ class TaskCard extends StatelessWidget {
     this.onDelete,
   });
 
-  Color _accentColor() {
+  Color _priorityColor() {
     switch (task.priority) {
       case 'High':
-        return AppColors.red;
+        return AppColors.priorityHigh;
       case 'Medium':
-        return AppColors.lightBlue;
+        return AppColors.priorityMedium;
       case 'Low':
-        return AppColors.mint;
+        return AppColors.priorityLow;
       default:
-        return AppColors.grey;
+        return AppColors.textTertiary;
     }
-  }
-
-  Color _sourceIconBg() {
-    return task.source == 'Voice' ? AppColors.lavender.withValues(alpha: 0.2) : AppColors.paleYellow.withValues(alpha: 0.2);
-  }
-
-  Color _sourceIconColor() {
-    return task.source == 'Voice' ? AppColors.lavender : AppColors.paleYellow;
   }
 
   String _formatDate(DateTime? dt) {
@@ -75,114 +67,68 @@ class TaskCard extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceCard,
-            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-            border: Border.all(
-              color: AppColors.lightGrey.withValues(alpha: 0.2),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          decoration: const BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: AppColors.hairline, width: 1),
             ),
           ),
-          child: IntrinsicHeight(
-            child: Row(
-              children: [
-                Container(
-                  width: 6,
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: onToggleDone,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  margin: const EdgeInsets.only(right: 12),
                   decoration: BoxDecoration(
-                    color: _accentColor(),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(AppTheme.cardRadius),
-                      bottomLeft: Radius.circular(AppTheme.cardRadius),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: task.isDone ? AppColors.white : AppColors.hairline,
+                      width: 1.5,
                     ),
+                    color: task.isDone ? AppColors.white : Colors.transparent,
                   ),
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 14,
-                    ),
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: onToggleDone,
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: task.isDone
-                                    ? AppColors.mint
-                                    : AppColors.grey,
-                                width: 2,
-                              ),
-                              color: task.isDone
-                                  ? AppColors.mint
-                                  : Colors.transparent,
-                            ),
-                            child: task.isDone
-                                ? const Icon(
-                                    Icons.check,
-                                    size: 16,
-                                    color: AppColors.black,
-                                  )
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                task.title,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: task.isDone
-                                      ? AppColors.grey
-                                      : AppColors.white,
-                                  decoration: task.isDone
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                                  decorationColor: AppColors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              if (task.dueDate != null)
-                                Text(
-                                  _formatDate(task.dueDate),
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.grey,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: _sourceIconBg(),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            task.source == 'Voice'
-                                ? Icons.mic
-                                : Icons.edit_note,
-                            size: 16,
-                            color: _sourceIconColor(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              ),
+              Container(
+                width: 6,
+                height: 6,
+                margin: const EdgeInsets.only(right: 12),
+                decoration: BoxDecoration(
+                  color: task.isDone ? AppColors.textTertiary : _priorityColor(),
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: task.isDone ? AppColors.textTertiary : AppColors.textPrimary,
+                        decoration: task.isDone ? TextDecoration.lineThrough : null,
+                        decorationColor: AppColors.textTertiary,
+                      ),
+                    ),
+                    if (task.dueDate != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          _formatDate(task.dueDate),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
