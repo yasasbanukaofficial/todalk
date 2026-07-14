@@ -11,4 +11,8 @@ export default () => ({
     ttl: parseInt(process.env.THROTTLE_TTL || '60', 10),
     limit: parseInt(process.env.THROTTLE_LIMIT || '10', 10),
   },
+  deepgram: {
+    apiKey: process.env.DEEPGRAM_API_KEY,
+    baseUrl: process.env.DEEPGRAM_BASE_URL || 'https://api.deepgram.com',
+  },
 });

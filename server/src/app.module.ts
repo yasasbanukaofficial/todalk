@@ -8,6 +8,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { TodosModule } from './todos/todos.module';
+import { VoiceModule } from './voice/voice.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
@@ -31,6 +32,7 @@ import { HealthController } from './health/health.controller';
     AuthModule,
     UsersModule,
     TodosModule,
+    VoiceModule,
   ],
   controllers: [HealthController],
   providers: [
