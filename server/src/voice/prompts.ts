@@ -20,29 +20,16 @@ export const CONFIRM_TASK_PROMPTS = [
 ];
 
 export const DATE_CONFIRM_PROMPTS = [
-  (date: string) => `${date}. What time?`,
-  (date: string) => `Due ${date} — what time?`,
-  (date: string) => `Okay, ${date}. Got a time?`,
-  (date: string) => `${date}. When's the time?`,
+  (date: string) => `Due ${date}. What priority — Low, Medium, or High?`,
+  (date: string) => `${date}, cool. Set a priority? Low, Medium, or High?`,
+  (date: string) => `${date} it is. Low, Medium, or High?`,
+  (date: string) => `So ${date}. Pick a priority: Low, Medium, or High.`,
 ];
 
 export const DATE_FALLBACK_PROMPTS = [
-  "No worries, skip the date. What time?",
-  "Let's skip the date. Got a time?",
-  "Alright, no due date. Any preferred time?",
-];
-
-export const TIME_FALLBACK_PROMPTS = [
-  "No problem, no time. What priority — Low, Medium, or High?",
-  "Skip the time. Low, Medium, or High priority?",
-  "Alright. Low, Medium, or High?",
-];
-
-export const TIME_CONFIRM_PROMPTS = [
-  (time: string) => `${time}. What priority — Low, Medium, or High?`,
-  (time: string) => `At ${time}. Set priority: Low, Medium, or High?`,
-  (time: string) => `${time}. Low, Medium, or High?`,
-  (time: string) => `So ${time}. Pick a priority.`,
+  "No worries, skip the date. What priority — Low, Medium, or High?",
+  "Let's skip the deadline. Low, Medium, or High priority?",
+  "Alright, no due date. Low, Medium, or High?",
 ];
 
 export const PRIORITY_CONFIRM_PROMPTS = [

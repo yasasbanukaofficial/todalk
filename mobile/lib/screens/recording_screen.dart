@@ -184,7 +184,6 @@ class _RecordingScreenState extends State<RecordingScreen>
   void _onTapDown() {
     if (_currentState != 'awaitingTask' &&
         _currentState != 'awaitingDate' &&
-        _currentState != 'awaitingTime' &&
         _currentState != 'awaitingPriority') return;
     if (!_available || _isSpeaking) return;
 
@@ -301,7 +300,6 @@ class _RecordingScreenState extends State<RecordingScreen>
   bool get _isAwaitingInput =>
       _currentState == 'awaitingTask' ||
       _currentState == 'awaitingDate' ||
-      _currentState == 'awaitingTime' ||
       _currentState == 'awaitingPriority';
 
   String _statusText() {
@@ -317,9 +315,8 @@ class _RecordingScreenState extends State<RecordingScreen>
   String _promptText() {
     switch (_currentState) {
       case 'awaitingTask': return 'What is the task?';
-      case 'awaitingDate': return 'When is it due?';
-      case 'awaitingTime': return 'What time?';
-      case 'awaitingPriority': return 'Low, Medium, or High?';
+      case 'awaitingDate': return 'Say: tomorrow, next Monday, March 15, or skip';
+      case 'awaitingPriority': return 'Say: high, medium, or low';
       default: return '';
     }
   }

@@ -1,11 +1,10 @@
-import { pick, GREETING_PROMPTS, RETRY_PROMPTS, CONFIRM_TASK_PROMPTS, DATE_CONFIRM_PROMPTS, DATE_FALLBACK_PROMPTS, TIME_CONFIRM_PROMPTS, TIME_FALLBACK_PROMPTS, PRIORITY_CONFIRM_PROMPTS } from './prompts';
-import { resolveDueDate, resolveDateOnly, resolveTimeOnly, resolveDateAndTime, combineDateTime, formatDateOnly, formatTimeOnly, formatDateShort, parsePriority } from './date-resolver';
+import { pick, GREETING_PROMPTS, RETRY_PROMPTS, CONFIRM_TASK_PROMPTS, DATE_CONFIRM_PROMPTS, DATE_FALLBACK_PROMPTS, PRIORITY_CONFIRM_PROMPTS } from './prompts';
+import { resolveDueDate, formatDateShort, formatDateOnly, parsePriority } from './date-resolver';
 
 export enum ConvoState {
   GREETING = 'greeting',
   AWAITING_TASK = 'awaitingTask',
   AWAITING_DATE = 'awaitingDate',
-  AWAITING_TIME = 'awaitingTime',
   AWAITING_PRIORITY = 'awaitingPriority',
   SAVING = 'saving',
   DONE = 'done',
@@ -23,8 +22,6 @@ export interface ConversationSession {
   lastConfirmTaskIndex: number;
   lastDateConfirmIndex: number;
   lastDateFallbackIndex: number;
-  lastTimeConfirmIndex: number;
-  lastTimeFallbackIndex: number;
   lastPriorityConfirmIndex: number;
   lastRetryIndex: number;
 }
@@ -35,7 +32,7 @@ export interface ActionResult {
 }
 
 export const MAX_RETRIES = 2;
-const SKIP_WORDS = new Set(['skip', 'none', 'nope', 'nah', 'no date', 'no time', 'no due date', "don't have", 'not sure', 'whatever', 'no', 'not really', 'never mind']);
+const SKIP_WORDS = new Set(['skip', 'none', 'nope', 'nah', 'no date', "don't have", 'not sure', 'whatever', 'no', 'not really', 'never mind']);
 
 function isExactSkip(text: string): boolean {
   const lower = text.toLowerCase().trim();
@@ -55,8 +52,6 @@ export function createSession(userId: string, userName: string): ConversationSes
     lastConfirmTaskIndex: -1,
     lastDateConfirmIndex: -1,
     lastDateFallbackIndex: -1,
-    lastTimeConfirmIndex: -1,
-    lastTimeFallbackIndex: -1,
     lastPriorityConfirmIndex: -1,
     lastRetryIndex: -1,
   };
@@ -98,25 +93,18 @@ export function processTranscript(session: ConversationSession, transcript: stri
       if (isExactSkip(trimmed)) {
         const { value, index } = pick(DATE_FALLBACK_PROMPTS, session.lastDateFallbackIndex);
         session.lastDateFallbackIndex = index;
-        session.state = ConvoState.AWAITING_TIME;
-        return { text: value, state: ConvoState.AWAITING_TIME };
+        session.state = ConvoState.AWAITING_PRIORITY;
+        return { text: value, state: ConvoState.AWAITING_PRIORITY };
       }
 
-      const { date, time } = resolveDateAndTime(trimmed);
-      if (date) {
-        session.dueDate = time ? combineDateTime(date.date, time) : date.date;
-        const dateStr = formatDateOnly(date.date);
-        if (time) {
-          const timeStr = formatTimeOnly(session.dueDate!);
-          const { value, index } = pick(TIME_CONFIRM_PROMPTS, session.lastTimeConfirmIndex);
-          session.lastTimeConfirmIndex = index;
-          session.state = ConvoState.AWAITING_PRIORITY;
-          return { text: value(timeStr), state: ConvoState.AWAITING_PRIORITY };
-        }
+      const resolved = resolveDueDate(trimmed);
+      if (resolved) {
+        session.dueDate = resolved.date;
+        const dateStr = formatDateOnly(resolved.date);
         const { value, index } = pick(DATE_CONFIRM_PROMPTS, session.lastDateConfirmIndex);
         session.lastDateConfirmIndex = index;
-        session.state = ConvoState.AWAITING_TIME;
-        return { text: value(dateStr), state: ConvoState.AWAITING_TIME };
+        session.state = ConvoState.AWAITING_PRIORITY;
+        return { text: value(dateStr), state: ConvoState.AWAITING_PRIORITY };
       }
 
       if (session.retryCount < MAX_RETRIES) {
@@ -128,45 +116,6 @@ export function processTranscript(session: ConversationSession, transcript: stri
       }
       const { value, index } = pick(DATE_FALLBACK_PROMPTS, session.lastDateFallbackIndex);
       session.lastDateFallbackIndex = index;
-      session.state = ConvoState.AWAITING_TIME;
-      return { text: value, state: ConvoState.AWAITING_TIME };
-    }
-
-    case ConvoState.AWAITING_TIME: {
-      if (isExactSkip(trimmed)) {
-        session.dueDate = session.dueDate
-          ? new Date(session.dueDate.getFullYear(), session.dueDate.getMonth(), session.dueDate.getDate(), 23, 59)
-          : null;
-        const { value, index } = pick(TIME_FALLBACK_PROMPTS, session.lastTimeFallbackIndex);
-        session.lastTimeFallbackIndex = index;
-        session.state = ConvoState.AWAITING_PRIORITY;
-        return { text: value, state: ConvoState.AWAITING_PRIORITY };
-      }
-
-      const resolved = resolveTimeOnly(trimmed);
-      if (resolved) {
-        session.dueDate = session.dueDate
-          ? combineDateTime(session.dueDate, resolved)
-          : resolveDueDate(trimmed)?.date ?? null;
-        const timeStr = formatTimeOnly(session.dueDate!);
-        const { value, index } = pick(TIME_CONFIRM_PROMPTS, session.lastTimeConfirmIndex);
-        session.lastTimeConfirmIndex = index;
-        session.state = ConvoState.AWAITING_PRIORITY;
-        return { text: value(timeStr), state: ConvoState.AWAITING_PRIORITY };
-      }
-
-      if (session.retryCount < MAX_RETRIES) {
-        session.retryCount++;
-        return {
-          text: "Didn't catch that time. Try '5pm', 'morning', or '14:00'.",
-          state: ConvoState.AWAITING_TIME,
-        };
-      }
-      session.dueDate = session.dueDate
-        ? new Date(session.dueDate.getFullYear(), session.dueDate.getMonth(), session.dueDate.getDate(), 23, 59)
-        : null;
-      const { value, index } = pick(TIME_FALLBACK_PROMPTS, session.lastTimeFallbackIndex);
-      session.lastTimeFallbackIndex = index;
       session.state = ConvoState.AWAITING_PRIORITY;
       return { text: value, state: ConvoState.AWAITING_PRIORITY };
     }
