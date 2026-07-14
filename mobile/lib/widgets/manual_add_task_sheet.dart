@@ -33,19 +33,6 @@ class _ManualAddTaskSheetState extends State<ManualAddTaskSheet> {
     super.dispose();
   }
 
-  Color _priorityColor(String p) {
-    switch (p) {
-      case 'High':
-        return AppColors.red.withValues(alpha: 0.15);
-      case 'Medium':
-        return AppColors.lightBlue;
-      case 'Low':
-        return AppColors.mint;
-      default:
-        return AppColors.lightGrey;
-    }
-  }
-
   String _formatDate(DateTime dt) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -123,11 +110,12 @@ class _ManualAddTaskSheetState extends State<ManualAddTaskSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Add Task',
+            'ADD TASK',
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: AppColors.white,
+              fontSize: 12,
+              letterSpacing: 4,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 20),
@@ -137,16 +125,23 @@ class _ManualAddTaskSheetState extends State<ManualAddTaskSheet> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: AppColors.white,
+              color: AppColors.textPrimary,
             ),
             decoration: InputDecoration(
               hintText: 'What do you need to do?',
-              hintStyle: TextStyle(color: AppColors.grey.withValues(alpha: 0.5)),
-              filled: true,
-              fillColor: AppColors.surfaceCard,
+              hintStyle: const TextStyle(color: AppColors.textTertiary),
+              filled: false,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppColors.hairline, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppColors.hairline, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppColors.white, width: 1),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
@@ -161,14 +156,14 @@ class _ManualAddTaskSheetState extends State<ManualAddTaskSheet> {
                 label: _dueDate != null ? _formatDate(_dueDate!) : 'Set date',
                 icon: Icons.calendar_today,
                 onTap: _pickDate,
-                color: AppColors.paleYellow,
+                isSelected: _dueDate != null,
               ),
               const SizedBox(width: 10),
               ChipSelector(
                 label: _priority,
                 icon: Icons.flag,
                 onTap: _cyclePriority,
-                color: _priorityColor(_priority),
+                isSelected: true,
               ),
             ],
           ),
@@ -176,13 +171,18 @@ class _ManualAddTaskSheetState extends State<ManualAddTaskSheet> {
           Row(
             children: [
               Expanded(
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    'Cancel',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.grey,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: const Text(
+                      'CANCEL',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        letterSpacing: 2,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ),
@@ -191,7 +191,7 @@ class _ManualAddTaskSheetState extends State<ManualAddTaskSheet> {
               Expanded(
                 flex: 2,
                 child: PillButton(
-                  label: 'Save Task',
+                  label: 'SAVE TASK',
                   onTap: _save,
                 ),
               ),

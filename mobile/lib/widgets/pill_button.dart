@@ -3,53 +3,41 @@ import '../theme/app_theme.dart';
 
 class PillButton extends StatelessWidget {
   final String label;
-  final VoidCallback onTap;
-  final Color? backgroundColor;
-  final Color? textColor;
-  final Widget? leading;
-  final double? height;
+  final VoidCallback? onTap;
+  final bool isOutlined;
 
   const PillButton({
     super.key,
     required this.label,
     required this.onTap,
-    this.backgroundColor,
-    this.textColor,
-    this.leading,
-    this.height,
+    this.isOutlined = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: height ?? 54,
+      height: 54,
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? AppColors.black,
-          foregroundColor: textColor ?? AppColors.white,
+          backgroundColor: isOutlined ? Colors.transparent : AppColors.white,
+          foregroundColor: isOutlined ? AppColors.textSecondary : AppColors.black,
+          surfaceTintColor: Colors.transparent,
+          side: isOutlined ? const BorderSide(color: AppColors.hairline, width: 1) : BorderSide.none,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppTheme.pillRadius),
           ),
           elevation: 0,
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (leading != null) ...[
-              leading!,
-              const SizedBox(width: 10),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: textColor ?? AppColors.white,
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            letterSpacing: isOutlined ? 0 : 2,
+            color: isOutlined ? AppColors.textSecondary : AppColors.black,
+          ),
         ),
       ),
     );

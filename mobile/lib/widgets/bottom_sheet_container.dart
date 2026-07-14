@@ -17,7 +17,7 @@ class BottomSheetContainer extends StatelessWidget {
       height: height ?? MediaQuery.of(context).size.height * 0.55,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       decoration: const BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: AppColors.surface,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(AppTheme.sheetRadius),
           topRight: Radius.circular(AppTheme.sheetRadius),
@@ -30,7 +30,7 @@ class BottomSheetContainer extends StatelessWidget {
             height: 4,
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: AppColors.lightGrey,
+              color: AppColors.hairline,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
