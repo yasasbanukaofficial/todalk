@@ -19,7 +19,7 @@ class MicStatusIndicator extends StatelessWidget {
       children: [
         Icon(
           isActive ? Icons.mic : Icons.mic_off,
-          color: isActive ? AppColors.white : AppColors.grey,
+          color: isActive ? AppColors.white : AppColors.textSecondary,
           size: 20,
         ),
         const SizedBox(width: 10),
@@ -38,7 +38,7 @@ class MicStatusIndicator extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isActive
                     ? AppColors.white.withValues(alpha: 0.7 + barHeight * 0.3)
-                    : AppColors.grey.withValues(alpha: 0.4),
+                    : AppColors.textSecondary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
