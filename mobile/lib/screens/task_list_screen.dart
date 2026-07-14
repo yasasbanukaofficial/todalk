@@ -14,77 +14,60 @@ class TaskListScreen extends StatelessWidget {
     final currentFilter = provider.filter;
 
     final filters = ['All', 'Today', 'Upcoming', 'Done'];
-    final filterColors = {
-      'All': AppColors.lightGrey,
-      'Today': AppColors.mint,
-      'Upcoming': AppColors.lightBlue,
-      'Done': AppColors.lavender,
-    };
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.black,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 12),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 20),
               child: Text(
-                'Tasks',
+                'TASKS',
                 style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.white,
+                  fontSize: 12,
+                  letterSpacing: 4,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: filters.map((f) {
-                    final isSelected = currentFilter == f;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => provider.setFilter(f),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? filterColors[f]!
-                                : AppColors.surfaceCard,
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.chipRadius,
-                            ),
-                            border: Border.all(
-                              color: isSelected
-                                  ? filterColors[f]!
-                                  : AppColors.lightGrey.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Text(
-                            f,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isSelected
-                                  ? AppColors.black
-                                  : AppColors.grey,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: filters.map((f) {
+                  final isSelected = currentFilter == f;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => provider.setFilter(f),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isSelected ? AppColors.white : AppColors.hairline,
+                              width: 1,
                             ),
                           ),
                         ),
+                        child: Text(
+                          f.toUpperCase(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            letterSpacing: 2,
+                            fontWeight: FontWeight.w500,
+                            color: isSelected ? AppColors.textPrimary : AppColors.textTertiary,
+                          ),
+                        ),
                       ),
-                    );
-                  }).toList(),
-                ),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
@@ -96,17 +79,18 @@ class TaskListScreen extends StatelessWidget {
                           SizedBox(height: 80),
                           Center(
                             child: Text(
-                              'No tasks found',
-                              style: TextStyle(color: AppColors.grey),
+                              'NO TASKS FOUND',
+                              style: TextStyle(
+                                fontSize: 12,
+                                letterSpacing: 2,
+                                color: AppColors.textTertiary,
+                              ),
                             ),
                           ),
                         ],
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.only(
-                          top: 8,
-                          bottom: 80,
-                        ),
+                        padding: const EdgeInsets.only(bottom: 80),
                         itemCount: tasks.length,
                         itemBuilder: (context, index) {
                           final task = tasks[index];

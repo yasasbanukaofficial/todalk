@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/task.dart';
@@ -33,6 +34,27 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     super.dispose();
   }
 
+  Duration? _timeUntilDue(DateTime? dt) {
+    if (dt == null) return null;
+    return dt.difference(DateTime.now());
+  }
+
+  double _urgencyFraction(DateTime? dt) {
+    if (dt == null) return 0;
+    final diff = dt.difference(DateTime.now());
+    final total = const Duration(days: 7);
+    final remaining = diff.inMilliseconds / total.inMilliseconds;
+    return remaining.clamp(0.0, 1.0);
+  }
+
+  String _timeLabel(Duration? d) {
+    if (d == null) return 'NO DUE DATE';
+    if (d.isNegative) return 'OVERDUE';
+    if (d.inDays > 0) return '${d.inDays} DAYS LEFT';
+    if (d.inHours > 0) return '${d.inHours} HOURS LEFT';
+    return '${d.inMinutes} MIN LEFT';
+  }
+
   String _formatDate(DateTime? dt) {
     if (dt == null) return 'No due date';
     final months = [
@@ -45,16 +67,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     return '${months[dt.month - 1]} ${dt.day}, $hour:$min $amPm';
   }
 
-  Color _priorityColor(String p) {
+  Color _priorityDotColor(String p) {
     switch (p) {
       case 'High':
-        return AppColors.red.withValues(alpha: 0.15);
+        return AppColors.priorityHigh;
       case 'Medium':
-        return AppColors.lightBlue;
+        return AppColors.priorityMedium;
       case 'Low':
-        return AppColors.mint;
+        return AppColors.priorityLow;
       default:
-        return AppColors.lightGrey;
+        return AppColors.textTertiary;
     }
   }
 
@@ -66,207 +88,309 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       orElse: () => _task,
     );
 
+    final due = _timeUntilDue(task.dueDate);
+    final fraction = _urgencyFraction(task.dueDate);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surfaceDark,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Task Details',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppColors.white,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (_isEditing)
-              TextField(
-                controller: _titleController,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.white,
-                ),
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: AppColors.lightGrey.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: AppColors.surfaceCard,
-                  contentPadding: const EdgeInsets.all(14),
-                ),
-              )
-            else
-              Text(
-                task.title,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: task.isDone ? AppColors.grey : AppColors.white,
-                  decoration: task.isDone ? TextDecoration.lineThrough : null,
-                ),
-              ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                ChipSelector(
-                  label: _formatDate(task.dueDate),
-                  icon: Icons.calendar_today,
-                  color: AppColors.paleYellow,
-                ),
-                const SizedBox(width: 10),
-                ChipSelector(
-                  label: '${task.priority} Priority',
-                  icon: Icons.flag,
-                  color: _priorityColor(task.priority),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ChipSelector(
-              label: task.source,
-              icon: task.source == 'Voice' ? Icons.mic : Icons.edit_note,
-              color: task.source == 'Voice' ? AppColors.lavender : AppColors.mint,
-            ),
-            const SizedBox(height: 24),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceCard,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: AppColors.black,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  const Text(
-                    'Notes',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'No additional notes.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.grey.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceCard,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              ),
-              child: Row(
-                children: [
-                  const Text(
-                    'Created',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.grey,
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppColors.hairline, width: 1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        size: 18,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                   const Spacer(),
-                  Text(
-                    _formatDate(task.createdAt),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.white,
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: _priorityDotColor(task.priority),
+                      shape: BoxShape.circle,
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                if (_isEditing) ...[
-                  Expanded(
-                    child: PillButton(
-                      label: 'Save',
-                      onTap: () {
-                        provider.updateTask(task.copyWith(
-                          title: _titleController.text,
-                        ));
-                        setState(() => _isEditing = false);
-                      },
+              const SizedBox(height: 40),
+              Center(
+                child: SizedBox(
+                  width: 160,
+                  height: 160,
+                  child: CustomPaint(
+                    painter: _UrgencyRingPainter(
+                      fraction: fraction,
+                      isOverdue: due?.isNegative ?? false,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: PillButton(
-                      label: 'Cancel',
-                      backgroundColor: AppColors.lightGrey,
-                      textColor: AppColors.white,
-                      onTap: () => setState(() => _isEditing = false),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            task.dueDate != null
+                                ? '${due?.inDays ?? 0}'
+                                : '--',
+                            style: const TextStyle(
+                              fontSize: 40,
+                              fontWeight: FontWeight.w300,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _timeLabel(due),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 2,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ] else ...[
-                  Expanded(
-                    child: PillButton(
-                      label: 'Edit',
-                      backgroundColor: AppColors.surfaceCard,
-                      textColor: AppColors.white,
-                      onTap: () => setState(() => _isEditing = true),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: PillButton(
-                      label: task.isDone ? 'Undo' : 'Mark Done',
-                      onTap: () {
-                        provider.toggleDone(task.id);
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: TextButton.icon(
-                onPressed: () {
-                  provider.deleteTask(task.id);
-                  Navigator.of(context).pop();
-                },
-                icon: const Icon(Icons.delete_outline, color: AppColors.red, size: 20),
-                label: const Text(
-                  'Delete Task',
-                  style: TextStyle(
-                    color: AppColors.red,
-                    fontSize: 14,
                   ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 32),
+              if (_isEditing)
+                TextField(
+                  controller: _titleController,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.hairline, width: 1),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.hairline, width: 1),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.white, width: 1),
+                    ),
+                    contentPadding: const EdgeInsets.all(14),
+                  ),
+                )
+              else
+                Text(
+                  task.title,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w500,
+                    color: task.isDone ? AppColors.textTertiary : AppColors.textPrimary,
+                    decoration: task.isDone ? TextDecoration.lineThrough : null,
+                    decorationColor: AppColors.textTertiary,
+                  ),
+                ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  ChipSelector(
+                    label: _formatDate(task.dueDate),
+                    icon: Icons.calendar_today,
+                  ),
+                  const SizedBox(width: 10),
+                  ChipSelector(
+                    label: task.priority,
+                    isSelected: true,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ChipSelector(
+                label: task.source,
+                icon: task.source == 'Voice' ? Icons.mic : Icons.edit_note,
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.hairline, width: 1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'NOTES',
+                      style: TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No additional notes.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.hairline, width: 1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Text(
+                      'CREATED',
+                      style: TextStyle(
+                        fontSize: 11,
+                        letterSpacing: 2,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      _formatDate(task.createdAt),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  if (_isEditing) ...[
+                    Expanded(
+                      child: PillButton(
+                        label: 'SAVE',
+                        onTap: () {
+                          provider.updateTask(task.copyWith(
+                            title: _titleController.text,
+                          ));
+                          setState(() => _isEditing = false);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: PillButton(
+                        label: 'CANCEL',
+                        isOutlined: true,
+                        onTap: () => setState(() => _isEditing = false),
+                      ),
+                    ),
+                  ] else ...[
+                    Expanded(
+                      child: PillButton(
+                        label: 'EDIT',
+                        isOutlined: true,
+                        onTap: () => setState(() => _isEditing = true),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: PillButton(
+                        label: task.isDone ? 'UNDO' : 'MARK DONE',
+                        onTap: () {
+                          provider.toggleDone(task.id);
+                          Navigator.of(context).pop();
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: GestureDetector(
+                  onTap: () {
+                    provider.deleteTask(task.id);
+                    Navigator.of(context).pop();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      'DELETE TASK',
+                      style: TextStyle(
+                        fontSize: 12,
+                        letterSpacing: 2,
+                        color: AppColors.priorityHigh,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _UrgencyRingPainter extends CustomPainter {
+  final double fraction;
+  final bool isOverdue;
+
+  _UrgencyRingPainter({required this.fraction, required this.isOverdue});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 8;
+
+    final bgPaint = Paint()
+      ..color = AppColors.hairline
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    canvas.drawCircle(center, radius, bgPaint);
+
+    if (fraction > 0) {
+      final progressPaint = Paint()
+        ..color = isOverdue ? AppColors.priorityHigh : AppColors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        -pi / 2,
+        2 * pi * fraction,
+        false,
+        progressPaint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _UrgencyRingPainter old) =>
+      old.fraction != fraction || old.isOverdue != isOverdue;
 }
