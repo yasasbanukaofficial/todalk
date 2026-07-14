@@ -72,7 +72,7 @@ export class DeepgramService {
       punctuate: 'true',
       utterance_end_ms: '1000',
       vad_events: 'true',
-      endpointing: '400',
+      endpointing: '2000',
     });
 
     socket.on('open', () => {

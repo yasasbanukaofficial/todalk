@@ -18,6 +18,8 @@ import {
 interface ClientSession {
   convo: ConversationSession;
   deepgram: DeepgramSession | null;
+  pendingTranscript: string;
+  currentUtteranceTranscripts: Set<string>;
 }
 
 @WebSocketGateway({ path: '/voice/stream', cors: { origin: '*' } })
@@ -38,10 +40,11 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const session: ClientSession = {
       convo: createSession(clientId, 'there'),
       deepgram: null,
+      pendingTranscript: '',
+      currentUtteranceTranscripts: new Set(),
     };
     this.clients.set(clientId, session);
 
-    // Attach raw message handler for both binary and text frames
     client.on('message', (data: Buffer | string, isBinary: boolean) => {
       if (isBinary) {
         this.handleAudioChunk(client, data as Buffer);
@@ -50,7 +53,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     });
 
-    // Send greeting
     try {
       const greeting = getGreeting(session.convo);
       const audioBuffer = await this.deepgramService.synthesizeSpeech(greeting.text);
@@ -94,6 +96,12 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.deepgramService.closeSession(session.deepgram);
           session.deepgram = null;
         }
+        // Process whatever transcript we accumulated
+        if (session.pendingTranscript) {
+          this.handleTranscript(client, session.pendingTranscript);
+          session.pendingTranscript = '';
+          session.currentUtteranceTranscripts.clear();
+        }
         break;
       case 'cancel':
         if (session.deepgram) {
@@ -113,14 +121,23 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!session.deepgram) {
       try {
         session.deepgram = await this.deepgramService.createSttSession(
-          (text: string, isFinal: boolean) => {
-            this.sendJson(client, { type: 'transcript', text, isFinal });
-            if (isFinal) {
-              this.handleTranscript(client, text);
+          (text: string, _isFinal: boolean) => {
+            this.sendJson(client, { type: 'transcript', text, isFinal: _isFinal });
+
+            if (text) {
+              // Track the best transcript (longest = most complete)
+              if (text.length > session.pendingTranscript.length) {
+                session.pendingTranscript = text;
+              }
             }
           },
           () => {
-            this.logger.debug(`Utterance end for client ${clientId}`);
+            // UtteranceEnd — natural end of speech detected
+            if (session.pendingTranscript) {
+              this.handleTranscript(client, session.pendingTranscript);
+              session.pendingTranscript = '';
+              session.currentUtteranceTranscripts.clear();
+            }
           },
         );
       } catch (err) {
@@ -141,7 +158,10 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const session = this.clients.get(clientId);
     if (!session) return;
 
-    const result = processTranscript(session.convo, transcript);
+    const trimmed = transcript.trim();
+    if (!trimmed) return;
+
+    const result = processTranscript(session.convo, trimmed);
     if (!result) return;
 
     if (result.state === ConvoState.SAVING) {

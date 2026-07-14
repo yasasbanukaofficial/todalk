@@ -255,6 +255,8 @@ class _RecordingScreenState extends State<RecordingScreen>
     await _audioSub?.cancel();
     _audioSub = null;
     await _recorder.stop();
+    // Allow buffered audio chunks to reach server before closing
+    await Future.delayed(const Duration(milliseconds: 200));
     _voice?.closeStream();
 
     setState(() {
