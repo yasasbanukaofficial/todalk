@@ -1,7 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
+
+DateTime? _decodeJwtExpiry(String token) {
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) return null;
+    final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+    final map = jsonDecode(payload) as Map<String, dynamic>;
+    final exp = map['exp'] as int?;
+    if (exp == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(exp * 1000, isUtc: true);
+  } catch (_) {
+    return null;
+  }
+}
 
 class ApiException implements Exception {
   final int statusCode;
@@ -16,27 +30,37 @@ class ApiException implements Exception {
 class ApiService {
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
-  static const _timeout = Duration(seconds: 5);
 
+  final Dio _dio;
   final FlutterSecureStorage _storage;
-  final String baseUrl;
 
   String? _accessToken;
   String? _refreshToken;
+  DateTime? _tokenExpiry;
 
-  ApiService({required this.baseUrl})
-      : _storage = const FlutterSecureStorage();
+  ApiService({required String baseUrl})
+      : _dio = Dio(BaseOptions(
+          baseUrl: baseUrl,
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+          headers: {'Content-Type': 'application/json'},
+        )),
+        _storage = const FlutterSecureStorage();
 
   Future<void> init() async {
     _accessToken = await _storage.read(key: _accessTokenKey);
     _refreshToken = await _storage.read(key: _refreshTokenKey);
+    _tokenExpiry = _accessToken != null ? _decodeJwtExpiry(_accessToken!) : null;
   }
 
   bool get hasToken => _accessToken != null;
+  bool get isTokenExpired =>
+      _tokenExpiry != null && _tokenExpiry!.isBefore(DateTime.now().toUtc().add(const Duration(minutes: 1)));
 
   Future<void> setTokens(String accessToken, String refreshToken) async {
     _accessToken = accessToken;
     _refreshToken = refreshToken;
+    _tokenExpiry = _decodeJwtExpiry(accessToken);
     await _storage.write(key: _accessTokenKey, value: accessToken);
     await _storage.write(key: _refreshTokenKey, value: refreshToken);
   }
@@ -44,23 +68,24 @@ class ApiService {
   Future<void> clearTokens() async {
     _accessToken = null;
     _refreshToken = null;
+    _tokenExpiry = null;
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
   }
 
   Future<Map<String, dynamic>> post(String path,
       {Map<String, dynamic>? body, bool auth = false}) async {
-    return _request('POST', path, body: body, auth: auth);
+    return _request('POST', path, data: body, auth: auth);
   }
 
   Future<Map<String, dynamic>> get(String path,
-      {bool auth = false}) async {
-    return _request('GET', path, auth: auth);
+      {bool auth = false, bool isInit = false}) async {
+    return _request('GET', path, auth: auth, isInit: isInit);
   }
 
   Future<Map<String, dynamic>> patch(String path,
       {Map<String, dynamic>? body, bool auth = false}) async {
-    return _request('PATCH', path, body: body, auth: auth);
+    return _request('PATCH', path, data: body, auth: auth);
   }
 
   Future<Map<String, dynamic>> delete(String path,
@@ -69,69 +94,85 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> _request(String method, String path,
-      {Map<String, dynamic>? body, bool auth = false}) async {
-    final uri = Uri.parse('$baseUrl$path');
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
-
+      {Map<String, dynamic>? data, bool auth = false, bool isInit = false}) async {
     if (auth && _accessToken != null) {
-      headers['Authorization'] = 'Bearer $_accessToken';
-    }
-
-    var response = await _sendRequest(method, uri, headers, body);
-
-    if (response.statusCode == 401 && _refreshToken != null && auth) {
-      final refreshed = await _tryRefresh();
-      if (refreshed) {
-        headers['Authorization'] = 'Bearer $_accessToken';
-        response = await _sendRequest(method, uri, headers, body);
+      if (isTokenExpired && _refreshToken != null) {
+        await _tryRefresh();
       }
     }
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
-    }
+    final options = Options(
+      method: method,
+      headers: <String, dynamic>{
+        if (auth && _accessToken != null) 'Authorization': 'Bearer $_accessToken',
+      },
+      extra: {'_auth': auth, '_isInit': isInit},
+      sendTimeout: isInit ? const Duration(seconds: 5) : const Duration(seconds: 15),
+      receiveTimeout: isInit ? const Duration(seconds: 5) : const Duration(seconds: 15),
+    );
 
-    String msg;
     try {
-      final err = jsonDecode(response.body);
-      msg = err['message'] as String? ?? response.body;
-    } catch (_) {
-      msg = response.body;
+      var response = await _dio.request(path, data: data, options: options);
+
+      if (response.statusCode == 401 && _refreshToken != null && auth) {
+        final refreshed = await _tryRefresh();
+        if (refreshed) {
+          options.headers?['Authorization'] = 'Bearer $_accessToken';
+          response = await _dio.request(path, data: data, options: options);
+        }
+      }
+
+      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) {
+        return response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : <String, dynamic>{'data': response.data};
+      }
+
+      throw ApiException(
+        statusCode: response.statusCode ?? 0,
+        message: _extractMessage(response.data),
+      );
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw ApiException(statusCode: 0, message: 'Server not reachable. Check your connection.');
+      }
+      if (e.response != null) {
+        throw ApiException(
+          statusCode: e.response!.statusCode ?? 0,
+          message: _extractMessage(e.response!.data),
+        );
+      }
+      throw ApiException(statusCode: 0, message: 'Connection failed. Check your server.');
     }
-    throw ApiException(statusCode: response.statusCode, message: msg);
   }
 
-  Future<http.Response> _sendRequest(String method, Uri uri,
-      Map<String, String> headers, Map<String, dynamic>? body) async {
-    final future = switch (method) {
-      'GET' => http.get(uri, headers: headers),
-      'POST' => http.post(uri,
-          headers: headers, body: body != null ? jsonEncode(body) : null),
-      'PATCH' => http.patch(uri,
-          headers: headers, body: body != null ? jsonEncode(body) : null),
-      'DELETE' => http.delete(uri, headers: headers),
-      _ => throw ArgumentError('Unsupported method: $method'),
-    };
-    return future.timeout(_timeout);
+  String _extractMessage(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      return data['message'] as String? ?? data.toString();
+    }
+    return data?.toString() ?? 'Unknown error';
   }
 
   Future<bool> _tryRefresh() async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/refresh'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'refreshToken': _refreshToken}),
-      ).timeout(_timeout);
+      final response = await _dio.post('/auth/refresh',
+        data: {'refreshToken': _refreshToken},
+        options: Options(
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
 
       if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-        final data =
-            decoded['data'] as Map<String, dynamic>? ?? decoded;
-        final newAccess = data['accessToken'] as String?;
+        final data = response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : <String, dynamic>{};
+        final result = data['data'] as Map<String, dynamic>? ?? data;
+        final newAccess = result['accessToken'] as String?;
         if (newAccess != null) {
           _accessToken = newAccess;
+          _tokenExpiry = _decodeJwtExpiry(newAccess);
           await _storage.write(key: _accessTokenKey, value: newAccess);
           return true;
         }
