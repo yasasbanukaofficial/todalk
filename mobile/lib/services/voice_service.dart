@@ -26,6 +26,8 @@ class VoiceService {
   StreamSubscription? _wsSubscription;
   final StreamController<VoiceEvent> _eventController =
       StreamController<VoiceEvent>.broadcast();
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 5;
 
   Stream<VoiceEvent> get events => _eventController.stream;
   bool get isConnected => _ws != null;
@@ -38,12 +40,19 @@ class VoiceService {
         _userName = userName;
 
   Future<void> connect() async {
+    _reconnectAttempts = 0;
+    return _connectWithRetry();
+  }
+
+  Future<void> _connectWithRetry() async {
     final wsUrl = _baseUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
     try {
       _ws = await WebSocket.connect('$wsUrl/voice/stream')
           .timeout(const Duration(seconds: 10));
+
+      _reconnectAttempts = 0;
 
       if (_userName != null && _userName != 'there') {
         _ws!.add(jsonEncode({
@@ -71,6 +80,7 @@ class VoiceService {
         },
         onDone: () {
           debugPrint('Voice WS closed');
+          _scheduleReconnect();
         },
       );
 
@@ -80,7 +90,17 @@ class VoiceService {
         type: VoiceEventType.error,
         data: e.toString(),
       ));
+      _scheduleReconnect();
     }
+  }
+
+  void _scheduleReconnect() {
+    if (_reconnectAttempts >= _maxReconnectAttempts) return;
+    _reconnectAttempts++;
+    final delay = Duration(seconds: _reconnectAttempts);
+    debugPrint('Voice WS reconnecting in ${delay.inSeconds}s '
+        '(attempt $_reconnectAttempts/$_maxReconnectAttempts)');
+    Future.delayed(delay, _connectWithRetry);
   }
 
   void _handleTextMessage(String text) {
