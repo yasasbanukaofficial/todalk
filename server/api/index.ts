@@ -24,10 +24,16 @@ async function bootstrap() {
 }
 
 export default async function handler(req: any, res: any) {
-  const server = await bootstrap();
-  if (req.headers.upgrade?.toLowerCase() === 'websocket') {
-    server.emit('upgrade', req, req.socket, Buffer.alloc(0));
-  } else {
-    server.emit('request', req, res);
+  try {
+    const server = await bootstrap();
+    if (req.headers.upgrade?.toLowerCase() === 'websocket') {
+      server.emit('upgrade', req, req.socket, Buffer.alloc(0));
+    } else {
+      server.emit('request', req, res);
+    }
+  } catch (err: any) {
+    console.error('Handler error:', err);
+    res.statusCode = 500;
+    res.end(JSON.stringify({ error: err?.message || 'Unknown error' }));
   }
 }
