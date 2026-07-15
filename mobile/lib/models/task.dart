@@ -80,7 +80,7 @@ class Task {
 
     DateTime? dueDate;
     if (json['dueDate'] != null) {
-      dueDate = DateTime.parse(json['dueDate'] as String);
+      dueDate = DateTime.parse(json['dueDate'] as String).toLocal();
     }
 
     bool isDone;

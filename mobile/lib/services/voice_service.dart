@@ -42,7 +42,8 @@ class VoiceService {
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
     try {
-      _ws = await WebSocket.connect('$wsUrl/voice/stream');
+      _ws = await WebSocket.connect('$wsUrl/voice/stream')
+          .timeout(const Duration(seconds: 10));
 
       if (_userName != null && _userName != 'there') {
         _ws!.add(jsonEncode({

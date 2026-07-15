@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/task_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/task_card.dart';
 
-class TaskListScreen extends StatelessWidget {
+class TaskListScreen extends ConsumerWidget {
   const TaskListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<TaskProvider>();
-    final tasks = provider.tasks;
-    final currentFilter = provider.filter;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filteredResult = ref.watch(filteredTasksProvider);
+    final tasks = filteredResult.$1;
+    final currentFilter = filteredResult.$2;
 
     final filters = ['All', 'Today', 'Upcoming', 'Done'];
 
@@ -23,15 +23,7 @@ class TaskListScreen extends StatelessWidget {
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 16, 20, 20),
-              child: Text(
-                'TASKS',
-                style: TextStyle(
-                  fontSize: 12,
-                  letterSpacing: 4,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
-                ),
-              ),
+              child: Text('TASKS', style: TextStyle(fontSize: 12, letterSpacing: 4, fontWeight: FontWeight.w500, color: AppColors.textSecondary)),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -40,27 +32,13 @@ class TaskListScreen extends StatelessWidget {
                   final isSelected = currentFilter == f;
                   return Expanded(
                     child: GestureDetector(
-                      onTap: () => provider.setFilter(f),
+                      onTap: () => ref.read(taskProvider.notifier).setFilter(f),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              color: isSelected ? AppColors.white : AppColors.hairline,
-                              width: 1,
-                            ),
-                          ),
-                        ),
-                        child: Text(
-                          f.toUpperCase(),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11,
-                            letterSpacing: 2,
-                            fontWeight: FontWeight.w500,
-                            color: isSelected ? AppColors.textPrimary : AppColors.textTertiary,
-                          ),
-                        ),
+                        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: isSelected ? AppColors.white : AppColors.hairline, width: 1))),
+                        child: Text(f.toUpperCase(), textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w500,
+                            color: isSelected ? AppColors.textPrimary : AppColors.textTertiary)),
                       ),
                     ),
                   );
@@ -70,25 +48,9 @@ class TaskListScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: () async {
-                  await Future.delayed(const Duration(milliseconds: 300));
-                },
+                onRefresh: () async => Future.delayed(const Duration(milliseconds: 300)),
                 child: tasks.isEmpty
-                    ? ListView(
-                        children: const [
-                          SizedBox(height: 80),
-                          Center(
-                            child: Text(
-                              'NO TASKS FOUND',
-                              style: TextStyle(
-                                fontSize: 12,
-                                letterSpacing: 2,
-                                color: AppColors.textTertiary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
+                    ? ListView(children: const [SizedBox(height: 80), Center(child: Text('NO TASKS FOUND', style: TextStyle(fontSize: 12, letterSpacing: 2, color: AppColors.textTertiary)))])
                     : ListView.builder(
                         padding: const EdgeInsets.only(bottom: 80),
                         itemCount: tasks.length,
@@ -96,18 +58,9 @@ class TaskListScreen extends StatelessWidget {
                           final task = tasks[index];
                           return TaskCard(
                             task: task,
-                            onTap: () {
-                              Navigator.of(context).pushNamed(
-                                '/task-detail',
-                                arguments: task.id,
-                              );
-                            },
-                            onToggleDone: () {
-                              provider.toggleDone(task.id);
-                            },
-                            onDelete: () {
-                              provider.deleteTask(task.id);
-                            },
+                            onTap: () => Navigator.of(context).pushNamed('/task-detail', arguments: task.id),
+                            onToggleDone: () => ref.read(taskProvider.notifier).toggleDone(task.id),
+                            onDelete: () => ref.read(taskProvider.notifier).deleteTask(task.id),
                           );
                         },
                       ),
