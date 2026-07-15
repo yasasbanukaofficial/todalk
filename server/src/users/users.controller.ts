@@ -51,6 +51,7 @@ export class UsersController {
       email: user.email,
       name: user.name,
       phone: user.phone,
+      avatarUrl: user.avatarUrl ?? null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

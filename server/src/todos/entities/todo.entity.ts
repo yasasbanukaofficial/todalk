@@ -21,7 +21,7 @@ export class Todo {
   @Column({ default: false })
   isCompleted: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   dueDate: Date;
 
   @Column({

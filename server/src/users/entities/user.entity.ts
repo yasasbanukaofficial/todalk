@@ -9,14 +9,20 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
-  passwordHash: string;
+  @Column({ type: 'varchar', nullable: true })
+  passwordHash: string | null;
 
   @Column()
   name: string;
 
   @Column({ nullable: true })
   phone: string;
+
+  @Column({ type: 'varchar', nullable: true, unique: true })
+  googleId: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  avatarUrl: string | null;
 
   @Column({ type: 'varchar', nullable: true })
   refreshTokenHash: string | null;

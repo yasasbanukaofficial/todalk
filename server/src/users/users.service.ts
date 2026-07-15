@@ -53,6 +53,41 @@ export class UsersService {
     });
   }
 
+  async findByGoogleId(googleId: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: { googleId },
+    });
+  }
+
+  async createFromGoogle(data: {
+    email: string;
+    name: string;
+    googleId: string;
+    avatarUrl: string | null;
+  }): Promise<User> {
+    const existingUser = await this.userRepository.findOne({
+      where: { email: data.email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const user = this.userRepository.create({
+      email: data.email,
+      name: data.name,
+      googleId: data.googleId,
+      avatarUrl: data.avatarUrl,
+      passwordHash: null,
+    });
+
+    return this.userRepository.save(user);
+  }
+
+  async linkGoogleAccount(userId: string, googleId: string, avatarUrl: string | null): Promise<void> {
+    await this.userRepository.update(userId, { googleId, avatarUrl });
+  }
+
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findById(id);
 

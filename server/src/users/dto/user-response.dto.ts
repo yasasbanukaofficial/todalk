@@ -13,6 +13,9 @@ export class UserResponseDto {
   @ApiProperty({ example: '+1234567890', nullable: true })
   phone: string | null;
 
+  @ApiProperty({ example: 'https://lh3.googleusercontent.com/...', nullable: true })
+  avatarUrl: string | null;
+
   @ApiProperty({ example: '2026-07-15T00:00:00.000Z' })
   createdAt: Date;
 
