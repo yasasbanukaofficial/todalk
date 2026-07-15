@@ -3,7 +3,7 @@ import { ExpressAdapter } from '@nestjs/platform-express';
 import { WsAdapter } from '@nestjs/platform-ws';
 import express from 'express';
 import { createServer } from 'http';
-import { AppModule } from '../src/app.module';
+import { AppModule } from '../dist/app.module';
 
 const expressApp = express();
 const httpServer = createServer(expressApp);
