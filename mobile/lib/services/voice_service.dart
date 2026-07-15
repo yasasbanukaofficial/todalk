@@ -159,7 +159,8 @@ class VoiceService {
   }
 
   static Future<VoiceService> create({String? userName}) async {
-    final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:3000';
+    final baseUrl = (dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:3000')
+        .replaceAll(RegExp(r'/+$'), '');
     return VoiceService(baseUrl: baseUrl, userName: userName);
   }
 }
